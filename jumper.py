@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import random
 import sys
 import time
 
@@ -8,7 +9,7 @@ import unicornhat as unicorn
 class Game(object):
 
     GRAVITY = 0.01
-    JUMP_VELOCITY = -2.1
+    JUMP_VELOCITY = -0.3
     FRAME_RATE = 60
 
     def __init__(self):
@@ -24,6 +25,8 @@ class Game(object):
         
         # How fast the game progresses (independent of the framerate).
         self.tempo = 0.1
+
+        self.score = 0
 
     def draw(self):
 
@@ -46,7 +49,6 @@ class Game(object):
             
         unicorn.show()
 
-# TODO add something to make sure all objects are within bounds
     def do_physics(self):
         # Move all the obstacles based on the tempo.
         for o in self.obstacles:
@@ -63,6 +65,7 @@ class Game(object):
         # if collided, reset velocity and position
         if self.player.position[1] >= 6.0:
             self.player.position[1] = 6.0
+            self.player.velocity[1] = 0.0
 
         player_pos = [int(round(x)) for x in self.player.position]
         for o in self.obstacles:
@@ -71,7 +74,10 @@ class Game(object):
                 print("BOOM")
                 # TODO react correctly
 
-        # TODO cleanup obstacles that are out of screen
+        # Cleanup obstacles that are out of screen.
+        for o in self.obstacles:
+            if self.out_of_bounds(o.position):
+                self.obstacles.remove(o)
 
 
     def run(self, frame_rate):
@@ -87,25 +93,37 @@ class Game(object):
         #    time.sleep(1.0 / Game.FRAME_RATE)
 
 
-        print("started...")
-        for x in range(3 * Game.FRAME_RATE):
-            self.do_physics()
-            self.draw()
-            time.sleep(1.0 / Game.FRAME_RATE)
-            
-        print("jumping now!")
+        # Run for a random amount of time, before spawning another obstacle, then continue.
+
+        self.run_n(frame_rate, 3.0)
         self.player.jump()
-        for x in range(3 * Game.FRAME_RATE):
+        self.run_n(frame_rate, 1.0)
+        self.spawn_obstacle()
+        self.run_n(frame_rate, 2.0)
+        self.player.jump()
+        self.run_n(frame_rate, 0.5)
+        self.spawn_obstacle()
+        self.run_n(frame_rate, 5.0)
+        
+        return 0
+
+    def run_n(self, frame_rate, num_seconds):
+        for x in range(int(round(num_seconds * Game.FRAME_RATE))):
             self.do_physics()
             self.draw()
             time.sleep(1.0 / Game.FRAME_RATE)
 
-        
-        return 0
+    def out_of_bounds(self, position):
+        return position[0] < 0.0 or position[0] > 7.0 or position[1] < 0.0 or position[1] > 7.0
+
+    def spawn_obstacle(self):
+        self.obstacles.append(Obstacle([7.0, 6.0]))
+
 
 
     def print_intsructions():
         print("""oh hai TODO """) 
+
 
 
 class Thing(object):
