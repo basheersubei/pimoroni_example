@@ -2,24 +2,26 @@
 
 import random
 import sys
-import threading
 import time
 
+import alsaaudio
+import audioop
 import unicornhat as unicorn
 
-class Game(threading.Thread):
+class Game(object):
 
     GRAVITY = 0.01
     JUMP_VELOCITY = -0.3
     FRAME_RATE = 60
 
     def __init__(self):
-        threading.Thread.__init__(self)
-
         unicorn.set_layout(unicorn.AUTO)
         unicorn.rotation(0)
         unicorn.brightness(0.5)
         self.width, self.height = unicorn.get_shape()
+
+
+        self.setup_microphone()
 
         self.player = Player([0.0, 0.0])
         self.grounds = [Ground([1.0 * x, 7.0]) for x in range(8)]
@@ -87,7 +89,7 @@ class Game(threading.Thread):
     def run(self):
 
         #while True:
-        #    # TODO check for user input
+        
 
         #    # Update physics and redraw everything.
         #    self.do_physics()
@@ -109,9 +111,21 @@ class Game(threading.Thread):
 
     def run_n(self, frame_rate, num_seconds):
         for x in range(int(round(num_seconds * Game.FRAME_RATE))):
+            # check for user input
+            self.check_user_input()
+            # Update positions and redraw everything
             self.do_physics()
             self.draw()
             time.sleep(1.0 / Game.FRAME_RATE)
+
+    # If mike amplitude is >20000, then make player jump
+    def check_user_input(self):
+        l,data = self.inp.read()
+        if l == 640:
+            val = audioop.max(data, 2)
+            print val
+            if val > 20000:
+                self.player.jump()
 
     def out_of_bounds(self, position):
         return position[0] < 0.0 or position[0] > 7.0 or position[1] < 0.0 or position[1] > 7.0
@@ -119,6 +133,13 @@ class Game(threading.Thread):
     def spawn_obstacle(self):
         self.obstacles.append(Obstacle([7.0, 6.0]))
 
+    # Taken from http://stackoverflow.com/a/1937058/341505
+    def setup_microphone(self):
+        self.inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NONBLOCK, device="Device", cardindex=1)
+        self.inp.setchannels(1)
+        self.inp.setrate(8000)
+        self.inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
+        self.inp.setperiodsize(640)
 
 
     def print_intsructions():
@@ -137,7 +158,7 @@ class Player(Thing):
         self.color = [255, 255, 255]
 
     def jump(self):
-        if self.position[1] == 0.0:
+        if self.position[1] == 6.0:
             self.velocity[1] += Game.JUMP_VELOCITY
 
 class Obstacle(Thing):
@@ -156,6 +177,4 @@ class Ground(Thing):
 
 if __name__ == '__main__':
     g = Game()
-    g.daemon = True
-    g.start()
-    g.join()
+    g.run()
