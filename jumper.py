@@ -2,24 +2,26 @@
 
 import random
 import sys
+import threading
 import time
 
 import unicornhat as unicorn
 
-class Game(object):
+class Game(threading.Thread):
 
     GRAVITY = 0.01
     JUMP_VELOCITY = -0.3
     FRAME_RATE = 60
 
     def __init__(self):
+        threading.Thread.__init__(self)
 
         unicorn.set_layout(unicorn.AUTO)
         unicorn.rotation(0)
         unicorn.brightness(0.5)
         self.width, self.height = unicorn.get_shape()
 
-        self.player = Player([4.0, 0.0])
+        self.player = Player([0.0, 0.0])
         self.grounds = [Ground([1.0 * x, 7.0]) for x in range(8)]
         self.obstacles = [Obstacle([7.0, 6.0])]
         
@@ -27,6 +29,8 @@ class Game(object):
         self.tempo = 0.1
 
         self.score = 0
+
+        random.seed(0)
 
     def draw(self):
 
@@ -80,7 +84,7 @@ class Game(object):
                 self.obstacles.remove(o)
 
 
-    def run(self, frame_rate):
+    def run(self):
 
         #while True:
         #    # TODO check for user input
@@ -94,17 +98,13 @@ class Game(object):
 
 
         # Run for a random amount of time, before spawning another obstacle, then continue.
+        while True:
+            rand_secs = random.uniform(1, max(5 - (10 * self.tempo), 2))
+            self.run_n(Game.FRAME_RATE, rand_secs)
+            self.spawn_obstacle()
 
-        self.run_n(frame_rate, 3.0)
-        self.player.jump()
-        self.run_n(frame_rate, 1.0)
-        self.spawn_obstacle()
-        self.run_n(frame_rate, 2.0)
-        self.player.jump()
-        self.run_n(frame_rate, 0.5)
-        self.spawn_obstacle()
-        self.run_n(frame_rate, 5.0)
-        
+            self.tempo += 0.01  # Make the game more difficult (faster obstacles as we go)
+
         return 0
 
     def run_n(self, frame_rate, num_seconds):
@@ -137,7 +137,8 @@ class Player(Thing):
         self.color = [255, 255, 255]
 
     def jump(self):
-        self.velocity[1] += Game.JUMP_VELOCITY
+        if self.position[1] == 0.0:
+            self.velocity[1] += Game.JUMP_VELOCITY
 
 class Obstacle(Thing):
     def __init__(self, position):
@@ -155,4 +156,6 @@ class Ground(Thing):
 
 if __name__ == '__main__':
     g = Game()
-    sys.exit(g.run(Game.FRAME_RATE))
+    g.daemon = True
+    g.start()
+    g.join()
