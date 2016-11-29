@@ -13,19 +13,24 @@ class Game(object):
     GRAVITY = 0.01
     JUMP_VELOCITY = -0.3
     FRAME_RATE = 60
+    # Create list of coordinates to make a big X on screen.
+    BIG_X1 = [[i,i] for i in range(8)]
+    BIG_X2 = [[i,7-i] for i in range(8)]
+    BIG_X = BIG_X1 + BIG_X2
 
     def __init__(self):
 
         self.setup_microphone()
+        self.reset_game()
+        random.seed(0)
 
+    def reset_game(self):
         self.player = Player([1.0, 6.0])
         self.grounds = [Ground([1.0 * x, 7.0]) for x in range(8)]
         self.obstacles = [Obstacle([7.0, 6.0])]
-        
         # How fast the game progresses (independent of the framerate).
         self.tempo = 0.1
         self.score = 0
-        random.seed(0)
 
     def draw(self):
         # Clear all pixels
@@ -42,8 +47,9 @@ class Game(object):
             unicorn.set_pixel(*(pos + tuple(g.color)))
         
         # Draw player.
-        pos = tuple([int(round(p)) for p in self.player.position])
-        unicorn.set_pixel(*(pos + tuple(self.player.color)))
+        if self.player.alive:
+            pos = tuple([int(round(p)) for p in self.player.position])
+            unicorn.set_pixel(*(pos + tuple(self.player.color)))
             
         unicorn.show()
 
@@ -68,8 +74,9 @@ class Game(object):
         for o in self.obstacles:
             obs_pos = [int(round(x)) for x in o.position]
             if (player_pos == obs_pos):
-                print("BOOM")
-                # TODO react correctly
+                self.game_over()
+                self.reset_game()
+                return
 
         # Cleanup obstacles that are out of screen.
         for o in self.obstacles:
@@ -84,8 +91,7 @@ class Game(object):
             self.spawn_obstacle()
 
             self.tempo += 0.01  # Make the game more difficult (faster obstacles as we go)
-
-        return 0
+            self.score += 1
 
     def run_n(self, frame_rate, num_seconds):
         for x in range(int(round(num_seconds * Game.FRAME_RATE))):
@@ -101,7 +107,6 @@ class Game(object):
         l,data = self.inp.read()
         if l == 640:
             val = audioop.max(data, 2)
-            print val
             if val > 20000:
                 self.player.jump()
 
@@ -124,6 +129,24 @@ class Game(object):
         self.inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
         self.inp.setperiodsize(640)
 
+    def game_over(self):
+        print("Game over! Your score is: " + str(self.score))
+        # Clear all objects first
+        self.obstacles = list()
+        self.player.alive = False
+        self.grounds = list()
+        # Now display a flashing X
+        x_obstacles = [Obstacle(x) for x in Game.BIG_X]
+
+        for i in range(6):
+            if i % 2 == 0:
+                self.obstacles = list()
+            else:
+                self.obstacles = x_obstacles
+
+            self.draw()
+            time.sleep(0.5)
+
 
 class Thing(object):
     def __init__(self, position):
@@ -134,6 +157,7 @@ class Player(Thing):
         super(Player, self).__init__(position)
         self.velocity = [0.0, 0.0]
         self.color = [255, 255, 255]
+        self.alive = True
 
     def jump(self):
         if self.position[1] == 6.0:
@@ -153,4 +177,5 @@ class Ground(Thing):
 
 if __name__ == '__main__':
     g = Game()
-    g.run()
+    while True:
+        g.run()
