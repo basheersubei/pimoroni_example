@@ -177,5 +177,4 @@ class Ground(Thing):
 
 if __name__ == '__main__':
     g = Game()
-    while True:
-        g.run()
+    g.run()
