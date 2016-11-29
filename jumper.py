@@ -15,37 +15,29 @@ class Game(object):
     FRAME_RATE = 60
 
     def __init__(self):
-        unicorn.set_layout(unicorn.AUTO)
-        unicorn.rotation(0)
-        unicorn.brightness(0.5)
-        self.width, self.height = unicorn.get_shape()
-
 
         self.setup_microphone()
 
-        self.player = Player([0.0, 0.0])
+        self.player = Player([1.0, 6.0])
         self.grounds = [Ground([1.0 * x, 7.0]) for x in range(8)]
         self.obstacles = [Obstacle([7.0, 6.0])]
         
         # How fast the game progresses (independent of the framerate).
         self.tempo = 0.1
-
         self.score = 0
-
         random.seed(0)
 
     def draw(self):
-
         # Clear all pixels
         unicorn.clear()
 
+        # Draw each obstacle.
         for o in self.obstacles:
-            # Draw each obstacle.
             pos = tuple([int(round(p)) for p in o.position])
             unicorn.set_pixel(*(pos + tuple(o.color)))
 
+        # Draw the ground .
         for g in self.grounds:
-            # Draw the ground .
             pos = tuple([int(round(p)) for p in g.position])
             unicorn.set_pixel(*(pos + tuple(g.color)))
         
@@ -66,7 +58,6 @@ class Game(object):
         # Update position of player.
         self.player.position[1] += self.player.velocity[1]
 
-        # TODO check obstacles colliding with player
         # Check for collision and react accordingly.
         # if collided, reset velocity and position
         if self.player.position[1] >= 6.0:
@@ -85,20 +76,7 @@ class Game(object):
             if self.out_of_bounds(o.position):
                 self.obstacles.remove(o)
 
-
     def run(self):
-
-        #while True:
-        
-
-        #    # Update physics and redraw everything.
-        #    self.do_physics()
-        #    self.draw()
-
-        #    # HACK to implement fake (soft) frame_rate
-        #    time.sleep(1.0 / Game.FRAME_RATE)
-
-
         # Run for a random amount of time, before spawning another obstacle, then continue.
         while True:
             rand_secs = random.uniform(1, max(5 - (10 * self.tempo), 2))
@@ -133,6 +111,11 @@ class Game(object):
     def spawn_obstacle(self):
         self.obstacles.append(Obstacle([7.0, 6.0]))
 
+    def setup_unicorn(self):
+        unicorn.set_layout(unicorn.AUTO)
+        unicorn.rotation(0)
+        unicorn.brightness(0.5)
+
     # Taken from http://stackoverflow.com/a/1937058/341505
     def setup_microphone(self):
         self.inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NONBLOCK, device="Device", cardindex=1)
@@ -140,11 +123,6 @@ class Game(object):
         self.inp.setrate(8000)
         self.inp.setformat(alsaaudio.PCM_FORMAT_S16_LE)
         self.inp.setperiodsize(640)
-
-
-    def print_intsructions():
-        print("""oh hai TODO """) 
-
 
 
 class Thing(object):
@@ -167,13 +145,11 @@ class Obstacle(Thing):
         self.velocity = [0.0, 0.0]
         self.color = [255, 0, 0]
 
-
 class Ground(Thing):
     def __init__(self, position):
         super(Ground, self).__init__(position)
         self.velocity = [0.0, 0.0]
         self.color = [0, 255, 0]
-
 
 if __name__ == '__main__':
     g = Game()
